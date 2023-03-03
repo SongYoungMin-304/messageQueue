@@ -1,0 +1,5 @@
+spring:
+  activemq:
+    broker-url: tcp://127.0.0.1:61616?jms.useAsyncSend=true&wireFormat.tightEncodingEnabled=false
+    user: admin
+    password: admin
