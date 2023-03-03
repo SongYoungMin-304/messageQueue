@@ -1,6 +1,6 @@
 # messageQueue
 
-#Active Mq
+# Active Mq
 
 메세지 큐를 사용하는 이유
 
