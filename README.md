@@ -293,3 +293,57 @@ failover:(tcp://localhost:61618,tcp://localhost:61619)?randomize=false
 - > randomize=false로 세팅을 해야지 랜덤으로 가져오지 않고 하나가 안되면 하나를 가져오는 형식으로 처리됩니다.
 
 (randomize=true 는 로드 밸런싱입니다.)
+
+
+
+------------------------------------------------------------------------------------------------
+
+# kafka
+
+------------------------------------------------------------------------------------------------
+
+#kafka치설치
+
+### 1. **kafka 다운로드 받기 : [https://kafka.apache.org](https://kafka.apache.org/)**
+
+(2.7.0 으로 설치해야 제대로 됬음)
+
+### 2. kafka 파일 구성 확인하기
+
+1) {kafka 폴더}**/bin/windows**: zookeeper, kafka 실행 bat파일 들어있습니다.
+
+2) {kafka 폴더}**/config:** zookeeper, kafka config파일 들어있습니다.
+
+### 3. zookeeper, kafka 실행시키기
+
+**zookeeper 실행**
+
+bin\windows\zookeeper-server-start.bat config\zookeeper.properties
+
+**kafka 실행**
+
+bin\windows\kafka-server-start.bat config\server.properties
+
+![image](https://user-images.githubusercontent.com/56577599/222968064-347bb6bb-bf6d-40dd-a2ab-67df258e74a3.png)
+
+
+- 프로듀서 : 카프카와 통신하면서 메시지를 보내는 역할
+- 컨슈머 : 카프카와 통신하면서 메시지를 가져오는 역할
+- 주키퍼 : 컨슈머와 통신, 카프카의 메타데이터 정보를 저장, 카프카의 상태관리 등 목적으로 이용
+- 카프카
+
+### 4. kafka topic 생성 하기
+
+```bash
+# kafka topic 생성하기
+# bin\windows\kafka-topics.bat --create --bootstrap-server 카프카 접속주소:카프카 포트 --topic 카프카 토픽이름
+ex)
+bin\windows\kafka-topics.bat --create --bootstrap-server localhost:9092 --topic dev-topic
+
+# kafka topic 생성확인
+# bin\windows\kafka-topics.bat --list --bootstrap-server 카프카 접속주소:카프카 포트
+ex)
+bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9092
+```
+
+** kafka topic이 생성되면 C:\tmp\kafka-logs 위치에도 topic의 폴더가 생성됩니다.
