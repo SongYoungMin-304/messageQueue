@@ -302,7 +302,7 @@ failover:(tcp://localhost:61618,tcp://localhost:61619)?randomize=false
 
 ------------------------------------------------------------------------------------------------
 
-#kafka치설치
+#kafka설치
 
 ### 1. **kafka 다운로드 받기 : [https://kafka.apache.org](https://kafka.apache.org/)**
 
@@ -352,7 +352,8 @@ bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9092
 
 ### kafka 란?
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/b4f908ca-f10f-41dd-94fb-dee2409a94db/Untitled.png)
+![image](https://user-images.githubusercontent.com/56577599/223131184-9d20f7be-3bd7-456d-b36f-0af01a0ce770.png)
+
 
 - 메시징 큐의 하나로써 데이터 처리에 장점이 있음
 
@@ -372,7 +373,10 @@ bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9092
 ![Broker(서버) 3개,  토픽 T0, T1, 파티션 P0, P1, P2, P3
 TO → 4개의 파티션(P0,P1,P2,P3)
 T1 → 2개의 파티션(P0,P1)
-](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/b73cd68b-5011-4b66-b55a-ce546cbf3a41/Untitled.png)
+]
+
+![image](https://user-images.githubusercontent.com/56577599/223131255-de5e2374-17cd-4345-ac08-9b66a0326d38.png)
+
 
 Broker(서버) 3개,  토픽 T0, T1, 파티션 P0, P1, P2, P3
 TO → 4개의 파티션(P0,P1,P2,P3)
@@ -392,7 +396,8 @@ T1 → 2개의 파티션(P0,P1)
 - 리더 레플리카에 장애가 발생하는 경우, 리더 자리를 승계받을 준비
 - 리더 레플리카와 동기화된 레플리카들의 그룹을 ISR(In-Sync-Replica) 라고 함
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/2a3962f0-d9cc-4955-b54b-eb139de2b6f8/Untitled.png)
+![image](https://user-images.githubusercontent.com/56577599/223131310-50ef17a3-9075-401e-b108-c5353cfaac08.png)
+
 
 ### 윈도우에서 여러 브로커 띄우고 여러 파티션 및 레플리카 만들기
 
@@ -567,7 +572,8 @@ bin\windows\kafka-consumer-groups.bat --bootstrap-server localhost:9093 --group 
 
 **10) 브로커가 offline 되면?**
 
-![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/81d270c9-c403-48de-94a9-7e7a56d0d52d/Untitled.png)
+![image](https://user-images.githubusercontent.com/56577599/223131385-e18f002a-bf8a-4f3e-8a72-434299f9be4f.png)
+
 
 - 신규 consumer 를 실행하면 데이터 손실 없이 그대로 읽어 올 수 있어야 한다.
 
