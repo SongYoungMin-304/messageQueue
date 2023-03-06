@@ -347,3 +347,233 @@ bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9092
 ```
 
 ** kafka topic이 생성되면 C:\tmp\kafka-logs 위치에도 topic의 폴더가 생성됩니다.
+
+# kafka 설명
+
+### kafka 란?
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/b4f908ca-f10f-41dd-94fb-dee2409a94db/Untitled.png)
+
+- 메시징 큐의 하나로써 데이터 처리에 장점이 있음
+
+- 프로듀서로부터 메시지를 전달 받고, 다시 이를 컨슈머로 전달하는 역할
+- 카프카 메시지는 key(키) value(값)으로 구성
+- 키는 해당 메시지가 카프카 브로커 내부에 저장될 때 저장되는 위치와 관련된 요소
+
+### **토픽**
+
+- 메시지를 구분하는 논리적인 단위
+
+### **카프카 파티션**
+
+- 브로커 내부의 물리적인 단위
+- 모든 토픽은 각각 대응하는 하나 이상의 파티션이 브로커에 구성되고 발행되는 토픽 메시지들은 파티션에 나눠서 저장됩니다.
+
+![Broker(서버) 3개,  토픽 T0, T1, 파티션 P0, P1, P2, P3
+TO → 4개의 파티션(P0,P1,P2,P3)
+T1 → 2개의 파티션(P0,P1)
+](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/b73cd68b-5011-4b66-b55a-ce546cbf3a41/Untitled.png)
+
+Broker(서버) 3개,  토픽 T0, T1, 파티션 P0, P1, P2, P3
+TO → 4개의 파티션(P0,P1,P2,P3)
+T1 → 2개의 파티션(P0,P1)
+
+- Produce 에서 별다른 설정이 없으면 라운드 로빈 방식으로 파티션으로 나눠서 데이터를 보냄
+**(분산 처리를 통한 성능 향상)
+(서로 다른 브로커에 병렬 구성하여 요청의 부하를 분산시켜 줍니다.)**
+- 하나의 파티션 내에서는 메시지 순서가 보장됨
+- 다른 파티션에서는 순서 보장 안됨
+
+### **파티션 복제**
+
+- 하나의 파티션은 1개의 리더 레플리카와 그 외 0개 이상의 팔로어 레플리카로 구성됨
+- 리더 레플리카가 파티션의 모든 쓰기, 읽기 작업을 담당합니다.
+- 팔로어 레플리카는 리더 레플리카로 쓰인 메시지들을 그대로 복제
+- 리더 레플리카에 장애가 발생하는 경우, 리더 자리를 승계받을 준비
+- 리더 레플리카와 동기화된 레플리카들의 그룹을 ISR(In-Sync-Replica) 라고 함
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/2a3962f0-d9cc-4955-b54b-eb139de2b6f8/Untitled.png)
+
+### 윈도우에서 여러 브로커 띄우고 여러 파티션 및 레플리카 만들기
+
+※ 원래는 ec2 서버를 열고 실제로 여러 서버에다가 진행해 볼까 했지만.. AWS를 잘못 사용해서 과금이 된 이후 무서워서 윈도우로 띄우려고 함..
+
+**1) 주키퍼 구동(kafka 설치 참고)**
+
+**2) 카프카 [server.properties](http://server.properties) 복제 및 구동**
+
+```bash
+server1.properties
+server2.properties
+server3.properties
+```
+
+server.1.properties
+
+```xml
+broker.id=1
+listeners=PLAINTEXT://:9093
+log.dirs=/tmp/kafka-logs1
+```
+
+server.2.properties
+
+```xml
+broker.id=2
+listeners=PLAINTEXT://:9094
+log.dirs=/tmp/kafka-logs2
+```
+
+server.3.properties
+
+```xml
+broker.id=3
+listeners=PLAINTEXT://:9095
+log.dirs=/tmp/kafka-logs3
+```
+
+실행 명령어
+
+```xml
+bin\windows\kafka-server-start.bat config\server1.properties
+bin\windows\kafka-server-start.bat config\server2.properties
+bin\windows\kafka-server-start.bat config\server3.properties
+```
+
+**3) Topics 생성**
+
+```xml
+bin\windows\kafka-topics.bat --create --topic my-kafka-topic --bootstrap-server localhost:9093 --partitions 4 --replication-factor 3
+Created topic my-kafka-topic
+```
+
+**4) Topics 조회**
+
+```xml
+bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9093
+
+// 결과
+my-kafka-topic
+```
+
+```xml
+bin\windows\kafka-topics.bat --describe --topic my-kafka-topic --bootstrap-server localhost:9093
+
+// 결과
+Topic: my-kafka-topic   PartitionCount: 4       ReplicationFactor: 3    Configs: segment.bytes=1073741824
+        Topic: my-kafka-topic   Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1
+        Topic: my-kafka-topic   Partition: 1    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2
+        Topic: my-kafka-topic   Partition: 2    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3
+        Topic: my-kafka-topic   Partition: 3    Leader: 2       Replicas: 2,1,3 Isr: 2,1,3
+```
+
+5**) Topics 삭제**
+
+kafka [server.properties](http://server.properties) 파일에 설정을 하고 kafka broker를 재기동해야 topic을 삭제할 수 있습니다.
+
+```xml
+# config/server.properties파일
+delete.topic.enable = true
+```
+
+명령어
+
+```xml
+$  bin\windows\kafka-topics.bat --delete --topic my-kafka-topic --bootstrap-server localhost:9093
+```
+
+**6) Producers : Topic에 메시지 보내기**
+
+```xml
+bin\windows\kafka-console-producer.bat --broker-list localhost:9093,localhost:9094,localhost:9095 --topic my-kafka-topic
+```
+
+> first insert
+
+> second insert
+
+- 프로듀서가 데이터를 보낼때 “파티션키”를 지정해서 보낼 수 있습니다.
+- 파티션키를 지정하지 않으면, 라운드로빈 방식으로 파티션에 저장
+- 파티션키를 지정하면, 파티셔너가 파티션키의 HASH 값을 구해서 특정 파티션에 할당
+
+- 카프카에서 kafka-console-producer.bat로 Consumer에게 메세지를 보낼 때 기본적으로 key값이 null로 설정되어 있습니다. 이럴 때 설정에서 parse.key 및 key.separator 속성을 설정하면 key와 value가 포함된 메시지를 보낼 수 있습니다.
+
+```xml
+$ bin\windows\kafka-console-producer.bat \
+  --broker-list localhost:9093 \
+  --topic my-kafka-topic \
+  --property "parse.key=true" \
+  --property "key.separator=:"
+```
+
+- parse.key : key와 value 파싱 활성화 여부
+- key.separator : key와 value를 구분해주는 구분자
+- print.key : 화면에 key 를 보여줄 지 여부를 지정
+- print.value : 화면에 value 를 보여줄 지 여부를 지정
+
+**7) Consumer : Topic 메시지 읽기**
+
+```xml
+bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9093 --topic my-kafka-topic --from-beginning
+
+```
+
+first insert
+
+second insert
+
+- bootstrap-server는 클러스터의 브로커 중 하나일 수 있습니다.
+- Topic은 생상자가 클러스터에 데이터를 입력한 Topic(주제)과 동일해야 합니다.
+- from-beginning 은 클러스터에 현재 가지고 있는 모든 메시지를 원한다고 클러스터에 알립니다.
+- 컨슈머 그룹이 다른 새로운 컨슈머가 auto.offset.reset=earliest 설정으로 데이터를 0번 부터 가져갈 수 있습니다. 설정하지 않으면 새롭게 토픽에 생성된 메세지만 읽어옵니다.
+
+※KEY VALUE 로 표시하기
+
+```xml
+bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9093 --topic my-kafka-topic --from-beginning \
+   --property print.key=true --property key.separator=:
+```
+
+null:second insert
+
+null:first insert
+
+8**) Consumer 그룹**
+
+```xml
+bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9093 --topic my-kafka-topic --group A그룹
+```
+
+```xml
+bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9093 --topic my-kafka-topic --group B그룹
+```
+
+- 그룹A를 두개 구동 시키고 그룹 B를 1개 구동
+- 프로듀서가 TEST1, TEST2, TEST3, TEST4 를 입력
+
+→ 그룹 A에서는 TEST1, TEST3 / TEST2. TEST4 이런 식으로 분배가 되고 
+
+→ 그룹 B에서는 TEST1,TEST2,TEST3,TEST4 한번에 가져온다.
+
+**※ KAFKA는 데이터를 CONSUME 이 가져간다고 해서 데이터가 사라지는 것이 아니라 위치를 기억할뿐**
+
+9**) Offset**
+
+```xml
+bin\windows\kafka-consumer-groups.bat --bootstrap-server localhost:9093 --group B그룹 --reset-offsets --shift-by -2 --execute --topic my-kafka-topic
+```
+
+→ 해당 명령어를 수행하고 B그룹에서 다시 CONSUMER 를 실행하면 offset위치를 옮겨주기 때문에 더 많은 데이터를 읽게 해준다.
+
+**10) 브로커가 offline 되면?**
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/81d270c9-c403-48de-94a9-7e7a56d0d52d/Untitled.png)
+
+- 신규 consumer 를 실행하면 데이터 손실 없이 그대로 읽어 올 수 있어야 한다.
+
+※ 아래 에러 뜨면서 정상 동작 안함.. 확인 필요…
+
+[2023-03-06 22:57:41,565] WARN [Consumer clientId=consumer-console-consumer-6004-1, groupId=console-consumer-6004] Connection to node 1 (host.docker.internal/172.30.1.22:9093) could not be established. Broker may not be available. (org.apache.kafka.clients.NetworkClient)
+[2023-03-06 22:57:44,126] WARN [Consumer clientId=consumer-console-consumer-6004-1, groupId=console-consumer-6004] Connection to node 1 (host.docker.internal/172.30.1.22:9093) could not be established. Broker may not be available. (org.apache.kafka.clients.NetworkClient)
+[2023-03-06 22:57:46,683] WARN [Consumer clientId=consumer-console-consumer-6004-1, groupId=console-consumer-6004] Connection to node 1 (host.docker.internal/172.30.1.22:9093) could not be established. Broker may not be available. (org.apache.kafka.clients.NetworkClient)
+[2023-03-06 22:57:49,199] WARN [Consumer clientId=consumer-console-consumer-6004-1, groupId=console-consumer-6004] Connection to node 1 (host.docker.internal/172.30.1.22:9093) could not be established. Broker may not be available. (org.apache.kafka.clients.NetworkClient)
