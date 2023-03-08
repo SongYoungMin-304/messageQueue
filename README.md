@@ -462,7 +462,7 @@ my-kafka-topic
 ```
 
 ```xml
-bin\windows\kafka-topics.bat --describe --topic my-kafka-topic --bootstrap-server localhost:9093
+bin\windows\kafka-topics.bat --describe --topic my-kafka-topic --bootstrap-server localhost:9092,localhost:9093,localhost:9094
 
 // 결과
 Topic: my-kafka-topic   PartitionCount: 4       ReplicationFactor: 3    Configs: segment.bytes=1073741824
