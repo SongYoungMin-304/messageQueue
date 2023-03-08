@@ -3,13 +3,18 @@ spring:
     broker-url: tcp://127.0.0.1:61616?jms.useAsyncSend=true&wireFormat.tightEncodingEnabled=false
     user: admin
     password: admin
+
   kafka:
     bootstrap-servers:
       - 127.0.0.1:9092
+      - 127.0.0.1:9093
+      - 127.0.0.1:9094
     consumer:
       # consumer bootstrap servers가 따로 존재하면 설정
-      # bootstrap-servers: 192.168.0.4:9092
-
+      #bootstrap-servers:
+      #- 127.0.0.1:9092
+      #- 127.0.0.1:9093
+      #- 127.0.0.1:9094
       # 식별 가능한 Consumer Group Id
       group-id: testgroup
       # Kafka 서버에 초기 offset이 없거나, 서버에 현재 offset이 더 이상 존재하지 않을 경우 수행할 작업을 설정
@@ -30,6 +35,9 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-  message:
+message:
    topic:
-    name: my-kafka-topic
+     name: topic-p3-r1
+
+server:
+  port: 8081
