@@ -37,7 +37,7 @@ spring:
 
 message:
    topic:
-     name: topic-p3-r1
+     name: topic-p3-r0
 
 server:
-  port: 8081
+  port: 8086
