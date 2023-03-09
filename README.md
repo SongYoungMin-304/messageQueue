@@ -583,3 +583,364 @@ bin\windows\kafka-consumer-groups.bat --bootstrap-server localhost:9093 --group 
 [2023-03-06 22:57:44,126] WARN [Consumer clientId=consumer-console-consumer-6004-1, groupId=console-consumer-6004] Connection to node 1 (host.docker.internal/172.30.1.22:9093) could not be established. Broker may not be available. (org.apache.kafka.clients.NetworkClient)
 [2023-03-06 22:57:46,683] WARN [Consumer clientId=consumer-console-consumer-6004-1, groupId=console-consumer-6004] Connection to node 1 (host.docker.internal/172.30.1.22:9093) could not be established. Broker may not be available. (org.apache.kafka.clients.NetworkClient)
 [2023-03-06 22:57:49,199] WARN [Consumer clientId=consumer-console-consumer-6004-1, groupId=console-consumer-6004] Connection to node 1 (host.docker.internal/172.30.1.22:9093) could not be established. Broker may not be available. (org.apache.kafka.clients.NetworkClient)
+
+
+
+# Kafka with Spring boot
+
+카프카 설정
+
+- 9092,9093,9094 포트로 broker 3개 생성
+
+스프링 설정
+
+- spring boot 2.7.6
+- gradle
+
+**카프카 실행**
+
+```xml
+// 주키퍼 구동
+bin\windows\zookeeper-server-start.bat config\zookeeper.properties
+
+// 카프카 구동
+bin\windows\kafka-server-start.bat config\server1.properties
+bin\windows\kafka-server-start.bat config\server2.properties
+bin\windows\kafka-server-start.bat config\server3.properties
+```
+
+**topic 생성 (파티션 3)**
+
+```xml
+bin\windows\kafka-topics.bat --create --topic topic-p3-r0 --bootstrap-server localhost:9093 --partitions 3
+```
+
+**생성된 topic 조회**
+
+```java
+bin\windows\kafka-topics.bat --describe --topic topic-p3-r0 --bootstrap-server localhost:9093
+```
+
+결과
+
+```java
+Topic: topic-p3-r0      Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+Topic: topic-p3-r0      Partition: 1    Leader: 2       Replicas: 2     Isr: 2
+Topic: topic-p3-r0      Partition: 2    Leader: 3       Replicas: 3     Isr: 3
+```
+
+**application.yml**
+
+```xml
+spring:
+  kafka:
+    bootstrap-servers:
+      - 127.0.0.1:9092
+      - 127.0.0.1:9093
+      - 127.0.0.1:9094
+    consumer:
+      # consumer bootstrap servers가 따로 존재하면 설정
+      #bootstrap-servers:
+      #- 127.0.0.1:9092
+      #- 127.0.0.1:9093
+      #- 127.0.0.1:9094
+      # 식별 가능한 Consumer Group Id
+      group-id: testgroup
+      # Kafka 서버에 초기 offset이 없거나, 서버에 현재 offset이 더 이상 존재하지 않을 경우 수행할 작업을 설정
+      # latest: 가장 최근에 생산된 메시지로 offeset reset
+      # earliest: 가장 오래된 메시지로 offeset reset
+      # none: offset 정보가 없으면 Exception 발생
+      auto-offset-reset: earliest
+      # 데이터를 받아올 때, key/value를 역직렬화
+      # JSON 데이터를 받아올 것이라면 JsonDeserializer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      # producer bootstrap servers가 따로 존재하면 설정
+      # bootstrap-servers: 3.34.97.97:9092
+
+      # 데이터를 보낼 때, key/value를 직렬화
+      # JSON 데이터를 보낼 것이라면 JsonDeserializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+message:
+   topic:
+     name: topic-p3-r0
+
+server:
+  port: 8081
+```
+
+- 카프카 포트 설정(9092,9093,9094)
+- @Value 로 사용할 topic 명(topic-p3-r0,  파티션 3개 레플리카 0개
+
+**카프카 프로듀서**
+
+```java
+@Service
+public class KafkaProducer{
+
+     @Value(value = "${message.topic.name}")
+     private String topicName;
+
+     private final KafkaTemplate<String, String> kafkaTemplate;
+   
+     public KafkaProducer(KafkaTemplate<String, String> kafkaTemplate){
+         this.kafkaTemplate = kafkaTemplate;
+     }
+
+     public void sendMessage(String message){
+         System.out.println("message print" + message);
+         this.kafkaTemplate.send(topicName, message);
+     }
+}
+```
+
+**카프카 컨슈머**
+
+```java
+@Service
+public class KafkaConsumer {
+
+    @KafkaListener(topics = "${message.topic.name}", groupId = ConsumerConfig.GROUP_ID_CONFIG)
+    public void consume(String message) throws IOException{
+        System.out.println("consume message" + message);
+    }
+
+}
+```
+
+**테스트**
+
+[http://localhost:8086/kafkaSend?message=hi](http://localhost:8086/kafkaSend?message=hi) 호출
+
+**결과 값**
+
+```java
+message printhi
+consume messagehi
+```
+
+※ 하나의 토픽에 3가지의 파티션을 만들었는데 각 브로커에 어떤 식 할당 됬는 지 확인
+
+## Broker partition 시나리오
+
+파티션 3개 레플리카 1개 topic 생성
+
+**topic 생성 (파티션 3)**
+
+```xml
+bin\windows\kafka-topics.bat --create --topic topic-p3-r0 --bootstrap-server localhost:9093 --partitions 3
+```
+
+**생성된 topic 조회**
+
+```java
+bin\windows\kafka-topics.bat --describe --topic topic-p3-r0 --bootstrap-server localhost:9093
+```
+
+결과
+
+```java
+Topic: topic-p3-r0      Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+Topic: topic-p3-r0      Partition: 1    Leader: 2       Replicas: 2     Isr: 2
+Topic: topic-p3-r0      Partition: 2    Leader: 3       Replicas: 3     Isr: 3
+```
+
+***시나리오1)***
+
+브로커 3개 정상 구동 했을 때 10개의 message 를 보내는 경우
+
+```java
+message printn1
+consume messagen1
+message printn2
+consume messagen2
+message printn3
+consume messagen3
+message printn4
+consume messagen4
+message printn5
+consume messagen5
+message printn6
+consume messagen6
+message printn7
+consume messagen7
+message printn8
+consume messagen8
+message printn9
+consume messagen9
+message printn10
+consume messagen10
+```
+
+→ 10개가 다 그 즉시 consume 되는 걸 볼 수 있
+
+***시나리오2)***
+
+브로커 3개 중에서 1개가 내려갔을 때 10개의 message를 보내는 경우
+
+```java
+message printtest1
+consume messagetest1
+message printtest2
+consume messagetest2
+message printtest3
+consume messagetest3
+message printtest4
+consume messagetest4
+message printtest5
+consume messagetest5
+message printtest6
+consume messagetest6
+message printtest7
+consume messagetest7
+message printtest8
+consume messagetest8
+message printtest9
+consume messagetest9
+message printtest10
+consume messagetest10
+```
+
+topic 조회
+
+```java
+Topic: topic-p3-r0      Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+Topic: topic-p3-r0      Partition: 1    Leader: 2       Replicas: 2     Isr: 2
+Topic: topic-p3-r0      Partition: 2    Leader: none    Replicas: 3     Isr: 3
+```
+
+- 스프링 재구동 이후 정상 처리됨(offset 문제인듯, timeout 도 존재하는 듯..)
+
+※ 만약 10개를 미리 보낸다고 하면 
+파티션 1 - 4개
+
+파티션 2 - 3개
+
+파티션 2 - 3개
+
+그 상태에서 파티션을 내리고 consume을 하면 7개만 받아질 것으로 보임..
+
+```java
+consume messagejohn2
+consume messagejohn4
+consume messagejohn6
+consume messagejohn8
+consume messagejohn10
+consume messagejohn1
+consume messagejohn5
+```
+
+여기서 보면 라운드 로빈 방식으로 
+
+1번 파티션 : 1, 4, 7, 10
+
+2번 파티션 : 2, 5, 8
+
+3번 파티션 : 3, 6, 9
+
+으로 분배 됬을 꺼고 여기서 3,6,9를 못가져온 것을 알 수 있다. 
+
+***시나리오3)***
+
+브로커 3개 중에서 2개가 내려갔을 때 10개의 message를 보내는 경우
+
+topic 조회
+
+```java
+Topic: topic-p3-r0      Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+Topic: topic-p3-r0      Partition: 1    Leader: none    Replicas: 2     Isr: 2
+Topic: topic-p3-r0      Partition: 2    Leader: none    Replicas: 3     Isr: 3
+```
+
+- 동작할때도 있고 안될 때도 있고…
+
+## replica 시나리오
+
+파티션 1개 레플리카 3개 topic 생성
+
+**topic 생성 (파티션 3)**
+
+```xml
+bin\windows\kafka-topics.bat --create --topic topic-p1-r3 --bootstrap-server localhost:9093 --partitions 1 --replication-factor 3
+```
+
+**생성된 topic 조회**
+
+```java
+bin\windows\kafka-topics.bat --describe --topic topic-p1-r3 --bootstrap-server localhost:9093
+```
+
+결과
+
+```java
+Topic: topic-p1-r3      Partition: 0    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2
+```
+
+**leader가 3번 인데 3번을 내리는 경우**
+
+```java
+Topic: topic-p1-r3      Partition: 0    Leader: 1       Replicas: 3,1,2 Isr: 1,2
+```
+
+→ leader은 1번으로 변경 됨
+
+**또다시** **leader가 1번  내리는 경우**
+
+```java
+Topic: topic-p1-r3      Partition: 0    Leader: 2       Replicas: 3,1,2 Isr: 2
+```
+
+→ leader은 2번으로 변경 됨
+
+### 정상적으로 사용 할 수 있음
+
+## Broker Partition + Replica 시나리오
+
+```java
+Topic: topic-p3-r3      Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2,1,3
+Topic: topic-p3-r3      Partition: 1    Leader: 2       Replicas: 3,1,2 Isr: 2,1,3
+Topic: topic-p3-r3      Partition: 2    Leader: 2       Replicas: 1,2,3 Isr: 2,1,3
+```
+
+***시나리오1)***
+
+브로커 3개 정상 구동 했을 때 10개의 message 를 보내는 경우
+
+→ 정상
+
+***시나리오2)***
+
+브로커 1개가 내려간 경우
+
+→ 정상 
+
+```java
+Topic: topic-p3-r3      Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 1,2
+Topic: topic-p3-r3      Partition: 1    Leader: 1       Replicas: 3,1,2 Isr: 1,2
+Topic: topic-p3-r3      Partition: 2    Leader: 1       Replicas: 1,2,3 Isr: 1,2
+```
+
+***시나리오3)***
+
+브로커 2개가 내려간 경우
+
+-> 정상
+
+```java
+Topic: topic-p3-r3      Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2
+Topic: topic-p3-r3      Partition: 1    Leader: 2       Replicas: 3,1,2 Isr: 2
+Topic: topic-p3-r3      Partition: 2    Leader: 2       Replicas: 1,2,3 Isr: 2
+```
+
+===============================================================
+
+### 결론
+
+1) 파티션이 다수 이상 내려가면 처리가 안됨
+
+**2) replica로 파티션이 활성화 되면 별 문제 없음**
+
+3) 파티션이 내려가면 offset 문제가 좀 생기는 듯..(될 때도 있고 안될 때도 있고,,, )
